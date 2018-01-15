@@ -20,7 +20,7 @@
 							<option id="cdt.managedbuild.option.gnu.cross.prefix.1141649846" name="Prefix" superClass="cdt.managedbuild.option.gnu.cross.prefix"/>
 							<option id="cdt.managedbuild.option.gnu.cross.path.1963100721" name="Path" superClass="cdt.managedbuild.option.gnu.cross.path"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.targetPlatform.gnu.cross.2023971223" isAbstract="false" osList="all" superClass="cdt.managedbuild.targetPlatform.gnu.cross"/>
-							<builder arguments="BOOT=new APP=0 SPI_SPEED=40 SPI_MODE=QIO SPI_SIZE_MAP=4" command="make" id="cdt.managedbuild.builder.gnu.cross.835770153" incrementalBuildTarget="all flash" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
+							<builder arguments="BOOT=new APP=0 SPI_SPEED=40 SPI_MODE=QIO SPI_SIZE_MAP=4" command="make" enableCleanBuild="false" id="cdt.managedbuild.builder.gnu.cross.835770153" incrementalBuildTarget="clean all flash" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.878060226" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.938813584" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

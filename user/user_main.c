@@ -1,52 +1,50 @@
 /*
- * ESPRSSIF MIT License
+ * sniffer_main.c
  *
- * Copyright (c) 2015 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
- *
- * Permission is hereby granted for use on ESPRESSIF SYSTEMS ESP8266 only, in which case,
- * it is free of charge, to any person obtaining a copy of this software and associated
- * documentation files (the "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
+ *  Created on: 31 Dec 2017
+ *      Author: m2
  */
 
+
 #include "esp_common.h"
-#include "gpio.h"
 #include "uart.h"
+#include "gpio.h"
+#include "sniffer_backend.h"
+#include "serial_handler.h"
+#include "key.h"
 
-void promiscuous_rx_cb(uint8* buf, uint16 len) {
-	GPIO_OUTPUT_SET(2, 0);
-	printf("BUF%p LEN%d\n", buf, len);
-}
+#include "globals.h"
 
-void sniffer_backend(void* arg) {
-	GPIO_AS_OUTPUT(2);
-	wifi_set_opmode(STATION_MODE);
-	wifi_station_disconnect();
-	wifi_set_channel(11);
-	wifi_set_promiscuous_rx_cb(promiscuous_rx_cb);
-	wifi_promiscuous_enable(1);
-
-	while(true) {
-	GPIO_OUTPUT_SET(2, 1);
-	vTaskDelay(20/portTICK_RATE_MS);
+void blinker(void* arg) {
+	while(1) {
+	GPIO_OUTPUT(LED_GPIO, LED_OFF);
+	vTaskDelay(200/portTICK_RATE_MS);
+	GPIO_OUTPUT(LED_GPIO, LED_ON);
+	vTaskDelay(200/portTICK_RATE_MS);
 	}
-
 	vTaskDelete(NULL);
 }
 
+void flash_key_handler(void* arg) {
+	while (1) {
+	bool flash_pressed = GPIO_INPUT_GET(GPIO_ID_PIN(0));
+	static bool flash_pressed_prev = false;
+	static bool triggered = false;
+
+	if (flash_pressed && !flash_pressed_prev && !triggered) {
+		vTaskDelay(50/portTICK_RATE_MS); // Debounce
+		if (flash_pressed) {
+			// DO WORK HERE
+			printf("flash_key: pressed\n");
+			triggered = true;
+		}
+	}
+	if (!flash_pressed) triggered = false;
+
+	flash_pressed_prev = flash_pressed;
+	}
+	vTaskDelete(NULL);
+}
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
  * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
@@ -95,16 +93,25 @@ uint32 user_rf_cal_sector_set(void)
 
     return rf_cal_sec;
 }
-/******************************************************************************
- * FunctionName : user_init
- * Description  : entry of user application, init user function here
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
-void user_init(void)
-{
-	UART_SetBaudrate(UART0, 921600);
-    printf("SDK version:%s\n", system_get_sdk_version());
-    xTaskCreate(sniffer_backend, "sniffer_backend", 512, NULL, 6, NULL);
-}
 
+struct single_key_param* flash_key;
+
+void user_init(void) {
+	UART_SetBaudrate(0, 921600);
+
+	initialize_globals();
+
+    printf("SDK version:%s\n", system_get_sdk_version());
+    printf("Hello world!\n");
+    printf("Phy mode: %d\n", wifi_get_phy_mode());
+
+    // Set LED GPIO pin to output
+    GPIO_AS_OUTPUT(LED_GPIO);
+    GPIO_OUTPUT(LED_GPIO, LED_OFF);
+
+    xTaskCreate(blinker, "blinker", 256, NULL, 3, NULL);
+    xTaskCreate(flash_key_handler, "flash_key_handle", 256, NULL, 3, NULL);
+
+    xTaskCreate(sniffer_backend, "sniffer_backend", 512, NULL, 3, NULL);
+    xTaskCreate(serial_handler, "serial_handler", 256, NULL, 3, NULL);
+}

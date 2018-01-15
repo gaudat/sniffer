@@ -130,4 +130,11 @@ sinclude $(SDK_PATH)/Makefile
 .PHONY: FORCE
 FORCE:
 
+clean:
+	find . -type d -iname '*\.output' -exec rm -rf {} \;
+	rm -f $(BIN_PATH)/eagle*
+	
 flash:
+	cd $(BIN_PATH)
+	esptool.py -p /dev/ttyUSB0 -b 921600 write_flash 0x3fb000 blank.bin 0x3fc000 esp_init_data_default.bin 0x3fe000 blank.bin 0x0 eagle.flash.bin 0x20000 eagle.irom0text.bin 
+	
