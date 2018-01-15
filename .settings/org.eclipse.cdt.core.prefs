@@ -1,0 +1,12 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/BIN_PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/BIN_PATH/operation=replace
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/BIN_PATH/value=${ProjDirPath}/build
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/PATH/operation=replace
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/PATH/value=${PATH}\:/home/m2/esp-open-sdk/xtensa-lx106-elf/bin
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/SDK_PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/SDK_PATH/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/SDK_PATH/value=/home/m2/ESP8266_RTOS_SDK
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/append=true
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.2115624434/appendContributed=true
