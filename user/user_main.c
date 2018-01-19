@@ -9,17 +9,22 @@
 #include "esp_common.h"
 #include "uart.h"
 #include "gpio.h"
+#include "key.h"
+#include "globals.h"
 #include "sniffer_backend.h"
 #include "serial_handler.h"
-#include "key.h"
-
-#include "globals.h"
 
 void blinker(void* arg) {
+    // Set LED GPIO pin to output
+    GPIO_AS_OUTPUT(LED_GPIO);
+    while(1) {
+    	GPIO_OUTPUT(LED_GPIO, LED_OFF);
+    	vTaskDelay(1/portTICK_RATE_MS);
+    }
 	while(1) {
-	GPIO_OUTPUT(LED_GPIO, LED_OFF);
-	vTaskDelay(200/portTICK_RATE_MS);
 	GPIO_OUTPUT(LED_GPIO, LED_ON);
+	vTaskDelay(200/portTICK_RATE_MS);
+	GPIO_OUTPUT(LED_GPIO, LED_OFF);
 	vTaskDelay(200/portTICK_RATE_MS);
 	}
 	vTaskDelete(NULL);
@@ -27,7 +32,7 @@ void blinker(void* arg) {
 
 void flash_key_handler(void* arg) {
 	while (1) {
-	bool flash_pressed = GPIO_INPUT_GET(GPIO_ID_PIN(0));
+	bool flash_pressed = !GPIO_INPUT_GET(GPIO_ID_PIN(0));
 	static bool flash_pressed_prev = false;
 	static bool triggered = false;
 
@@ -45,18 +50,12 @@ void flash_key_handler(void* arg) {
 	}
 	vTaskDelete(NULL);
 }
-/******************************************************************************
- * FunctionName : user_rf_cal_sector_set
- * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
- *                We add this function to force users to set rf cal sector, since
- *                we don't know which sector is free in user's application.
- *                sector map for last several sectors : ABCCC
- *                A : rf cal
- *                B : rf init data
- *                C : sdk parameters
- * Parameters   : none
- * Returns      : rf cal sector
-*******************************************************************************/
+
+/**
+ * A function left over from the sample provided by Espressif.
+ *
+ * @return The location of RF calibration sectors in the flash.
+ */
 uint32 user_rf_cal_sector_set(void)
 {
     flash_size_map size_map = system_get_flash_size_map();
@@ -94,8 +93,9 @@ uint32 user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
-struct single_key_param* flash_key;
-
+/**
+ * One function to start it all.
+ */
 void user_init(void) {
 	UART_SetBaudrate(0, 921600);
 
@@ -105,13 +105,18 @@ void user_init(void) {
     printf("Hello world!\n");
     printf("Phy mode: %d\n", wifi_get_phy_mode());
 
-    // Set LED GPIO pin to output
-    GPIO_AS_OUTPUT(LED_GPIO);
-    GPIO_OUTPUT(LED_GPIO, LED_OFF);
-
     xTaskCreate(blinker, "blinker", 256, NULL, 3, NULL);
     xTaskCreate(flash_key_handler, "flash_key_handle", 256, NULL, 3, NULL);
-
-    xTaskCreate(sniffer_backend, "sniffer_backend", 512, NULL, 3, NULL);
     xTaskCreate(serial_handler, "serial_handler", 256, NULL, 3, NULL);
+    xTaskCreate(sniffer_backend, "sniffer_backend", 512, NULL, 3, NULL);
+
+    // Interrupt as soon as the UART receives one byte
+    UART_IntrConfTypeDef uart_intr;
+
+    // RX FIFO full interrupt mask is bit 0
+    uart_intr.UART_IntrEnMask = UART_RXFIFO_FULL_INT_ENA;
+    uart_intr.UART_RX_FifoFullIntrThresh = 1;
+    UART_IntrConfig(0, &uart_intr);
+    UART_intr_handler_register(serial_intr_handler, NULL);
+    ETS_UART_INTR_ENABLE();
 }

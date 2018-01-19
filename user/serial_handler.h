@@ -10,4 +10,14 @@
 
 void serial_handler(void* arg);
 
+void serial_intr_handler(void* arg);
+
+typedef void (*state_func)();
+
+struct serial_intr_handler_state {
+	state_func state;
+};
+
+struct serial_intr_handler_state serial_intr_handler_global_state;
+
 #endif /* SERIAL_HANDLER_H_ */

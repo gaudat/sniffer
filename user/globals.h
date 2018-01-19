@@ -8,14 +8,14 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
-#include "stdbool.h"
-#include "espressif/esp_common.h"
+#include "esp_common.h"
+
 /**
  * LED is connected to GPIO2.
  */
-#define LED_GPIO 2
-#define LED_OFF true
-#define LED_ON false
+#define LED_GPIO GPIO_Pin_2
+#define LED_OFF 1
+#define LED_ON 0
 
 /**
  * Call this function in user_init to set all globals to a defined initial value.
@@ -44,5 +44,7 @@ extern bool change_channels_automatically;
  * Set to false if the sniffer is in AP mode and is waiting for a connection to download captured packets.
  */
 extern bool is_capturing;
+
+extern uint32_t sniff_types_mask;
 
 #endif /* GLOBALS_H_ */

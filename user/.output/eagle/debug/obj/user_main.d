@@ -86,5 +86,4 @@
  /home/m2/ESP8266_RTOS_SDK/driver_lib/include/uart.h \
  /home/m2/ESP8266_RTOS_SDK/driver_lib/include/gpio.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/esp8266/gpio_register.h \
- sniffer_backend.h serial_handler.h key.h globals.h \
- /home/m2/ESP8266_RTOS_SDK/include/espressif/esp_common.h
+ key.h globals.h sniffer_backend.h serial_handler.h

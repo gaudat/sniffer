@@ -10,8 +10,10 @@
 
 bool is_autonomous;
 bool change_channels_automatically;
+u32 sniff_types_mask;
 
 void initialize_globals() {
 	is_autonomous = false;
 	change_channels_automatically = true;
+	sniff_types_mask = ~0;
 }

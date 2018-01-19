@@ -83,5 +83,7 @@
  /home/m2/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/pwm.h \
- /home/m2/ESP8266_RTOS_SDK/driver_lib/include/uart.h globals.h \
- /home/m2/ESP8266_RTOS_SDK/include/espressif/esp_common.h
+ /home/m2/ESP8266_RTOS_SDK/driver_lib/include/uart.h \
+ /home/m2/ESP8266_RTOS_SDK/driver_lib/include/gpio.h \
+ /home/m2/ESP8266_RTOS_SDK/include/espressif/esp8266/gpio_register.h \
+ globals.h serial_handler.h

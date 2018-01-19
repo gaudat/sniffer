@@ -7,109 +7,41 @@
 
 #include "esp_common.h"
 #include "uart.h"
+#include "gpio.h"
 #include "globals.h"
+#include "serial_handler.h"
 
 /**
- * Serial handler task function. Listens on UART0 for commands, modifies global variables to change sniffer working mode.
- * @param arg nothing
+ * The buffer storing command received from the serial port.
+ * The command processing task is only woken up by a newline.
+ * The buffer size is taken as 128 byte as it is the same size
+ * as the UART receive buffer.
+ *
+ * command_arg is not zero terminated. the length of the whole
+ * command is stored at serial_command_buffer_len.
  */
+static struct {
+	u8 command;
+	u8 command_arg[127];
+} serial_command_buffer;
+/**
+ * The buffer length will be zeroed as soon as possible by the handler task.
+ */
+static size_t serial_command_buffer_len = 0;
 
-static const int CONTROL_UART = 0; // Which UART to listen on
-
-void fsm_error();
-void waiting_alpha();
-void waiting_big_s();
-void waiting_small_s();
-void waiting_big_p() {}
-void waiting_small_p() {}
-void waiting_big_w() {}
-void waiting_small_w() {}
-void waiting_big_u() {}
-void waiting_small_u() {}
-void waiting_big_c() {}
-void waiting_small_c() {}
-void waiting_small_t() {}
-
-typedef void (*state_func)();
-state_func state;
-
-void fsm_error() {
-	printf("fsm: error\n");
-	char c;
-	//scanf("%c",&c);
-	printf("fsm: received %d\n", c);
-	switch (c) {
-	case '\r':
-	case '\n':
-	state = waiting_alpha;
-	break;
-	}
-}
-
-void waiting_alpha() {
-	printf("fsm: waiting_alpha\n");
-	char c;
-	//scanf("%c",&c);
-	printf("fsm: received %d\n", c);
-	switch (c) {
-	case 'S':
-		state = waiting_big_s;
-		break;
-	case 's':
-		state = waiting_small_s;
-		break;
-	case 'P':
-		state = waiting_big_p;
-		break;
-	case 'p':
-		state = waiting_small_p;
-		break;
-	case 'W':
-		state = waiting_big_w;
-		break;
-	case 'w':
-		state = waiting_small_w;
-		break;
-	case 'U':
-		state = waiting_big_u;
-		break;
-	case 'u':
-		state = waiting_small_u;
-		break;
-	case 'C':
-		state = waiting_big_c;
-		break;
-	case 'c':
-		state = waiting_small_c;
-		break;
-	case 't':
-		state = waiting_small_t;
-		break;
-	case '\r':
-	case '\n':
-		state = waiting_alpha;
-		break;
-	default:
-		state = fsm_error;
-		break;
-	}
-}
+/** This boolean will be polled by the serial command handler thread.
+ *  It is set by the interrupt is a newline is detected.
+ *  It will be cleared by the handler task when its job is done.
+ */
+static bool serial_command_handler_work = false;
 
 /**
  * Big S - Start changing channels automatically.
  * As soon as the command is received, channels are changed automatically. This function remains active until an endline is received.
  */
-void waiting_big_s() {
-	printf("fsm: waiting_big_s\n");
+void big_s() {
 	change_channels_automatically = true;
-
-	char c;
-	//scanf("%c",&c);
-	while (!(c == '\n' || c == '\r')) {
-		printf("waiting_eol: received %d\n", c);
-		//scanf("%c",&c);
-	}
-	state = waiting_alpha;
+	printf("fsm: changing channels automatically\n");
 }
 
 
@@ -118,71 +50,175 @@ void waiting_big_s() {
  * The channel stops changing as soon as the alphabet is received. After receiving the endline, the sniffing wifi channel is set to
  * the integer argument. If it is out of range tell an error.
  */
-void waiting_small_s() {
-	printf("fsm: waiting s\n");
+void small_s() {
 	change_channels_automatically = false;
-	char c;
-	//scanf("%c",&c);
-	int channel = 0;
-	while (!(c == '\n' || c == '\r')) {
-		if (c >= '0' && c <= '9') {
-			printf("fsm: entered %c\n",c);
-			channel *= 10;
-			channel += c-'0';
-		}
-		//scanf("%c",&c);
+
+	u8 channel = 0;
+
+	int i;
+	// Length of args is total length minus 2, 1 for command 1 for endline
+	for (i = 0; i < serial_command_buffer_len - 2; i++) {
+		channel *= 10;
+		channel += serial_command_buffer.command_arg[i] - '0';
+		printf("channel $d i %d %c\n", channel, i, serial_command_buffer.command_arg[i]);
 	}
+
 	printf("fsm: waiting s: new channel is %d\n", channel);
 	if (channel < 1 || channel > 14) {
 		printf("channel: out of range (%d)\n",channel);
 	} else {
-	wifi_set_channel(channel);
+		wifi_set_channel(channel);
 	}
 	printf("channel: %d\n", wifi_get_channel());
-	state = waiting_alpha;
 }
 
-void serial_handler(void* arg) {
-	/**
-	 * This task implements a finite-state machine for parsing command line control inputs.
-	 *
-	 * The command consist of a capital or small letter followed by zero or more digits.
-	 * The command ends with a newline (\n).
-	 *
-	 * The default state is waiting_alpha, which waits for an alphabet character.
-	 * Next the FSM will move to waiting_[alphabet] state, which reads all numbers until a newline then performs an action.
-	 * After that the FSM will move back to waiting_alpha.
-	 * If more than one alphabet is received, the FSM will go into an error state, which turns into waiting_alpha at the next newline.
-	 *
-	 * Current commands are:
-	 *
-	 * Big S - Start changing channels automatically (smartly).
-	 * small s - Stop changing channels automatically and change to the specified channel. If it is not given stay at the last channel.
-	 * Big P - Keep the specified kind of MAC frame headers. The number is between 0 to 31, 16*frame_type+frame_subtype.
-	 * small p - Filter the specified kind of MAC frame headers. The number is same as the Big P command.
-	 *
-	 * small t - Sends the current RTC time of the sniffer in microseconds.
-	 *
-	 * Big W - Starts recording all collected MAC frame headers to the MicroSD card from now on.
-	 * small w - Stops recording MAC frame headers to MicroSD card.
-	 * Big U - Starts writing filtered MAC frame headers to UART0.
-	 * small u - Stops writing filtered MAC frame headers to UART0.
-	 * Big C - Starts sniffing by putting the chip into promiscuous mode.
-	 * Small c- Stops sniffing by putting the chip into AP mode.
-	 */
+void big_p() {
+	u8 channel = 0;
 
-	printf("serial_handler: started\n");
-	state = waiting_alpha;
-
-	// Clean the input buffer first
-	UART_ResetFifo(0);
-
-	while (1) {
-		state();
-		vTaskDelay(10);
+	int i;
+	// Length of args is total length minus 2, 1 for command 1 for endline
+	for (i = 0; i < serial_command_buffer_len - 2; i++) {
+		channel *= 10;
+		channel += serial_command_buffer.command_arg[i] - '0';
+		printf("channel $d i %d %c\n", channel, i, serial_command_buffer.command_arg[i]);
 	}
 
+	if (channel < 0 || channel > 31) {
+		printf("type: out of range (%d)\n", channel);
+		return;
+	}
+
+	sniff_types_mask |= 1 << channel;
+	printf("type: current mask: 31:0 %08x\n", sniff_types_mask);
+}
+
+void small_p() {
+	u8 channel = 0;
+
+	int i;
+	// Length of args is total length minus 2, 1 for command 1 for endline
+	for (i = 0; i < serial_command_buffer_len - 2; i++) {
+		channel *= 10;
+		channel += serial_command_buffer.command_arg[i] - '0';
+		printf("channel $d i %d %c\n", channel, i, serial_command_buffer.command_arg[i]);
+	}
+
+	if (channel < 0 || channel > 31) {
+		printf("type: out of range (%d)\n", channel);
+		return;
+	}
+
+	sniff_types_mask &= ~( 1 << channel);
+	printf("type: current mask: 31:0 %08x\n", sniff_types_mask);
+}
+
+/**
+ * This task implements a finite-state machine for parsing command line control inputs.
+ *
+ * The command consist of a capital or small letter followed by zero or more digits.
+ * The command ends with a newline (\n).
+ *
+ * The default state is waiting_alpha, which waits for an alphabet character.
+ * Next the FSM will move to waiting_[alphabet] state, which reads all numbers until a newline then performs an action.
+ * After that the FSM will move back to waiting_alpha.
+ * If more than one alphabet is received, the FSM will go into an error state, which turns into waiting_alpha at the next newline.
+ *
+ * Current commands are:
+ *
+ * Big S - Start changing channels automatically (smartly).
+ * small s - Stop changing channels automatically and change to the specified channel. If it is not given stay at the last channel.
+ * Big P - Keep the specified kind of MAC frame headers. The number is between 0 to 31, 16*frame_type+frame_subtype.
+ * small p - Filter the specified kind of MAC frame headers. The number is same as the Big P command.
+ * Big W - Starts recording all collected MAC frame headers to the MicroSD card from now on.
+ * small w - Stops recording MAC frame headers to MicroSD card.
+ * Big C - Starts sniffing by putting the chip into promiscuous mode.
+ * Small c - Stops sniffing by putting the chip into AP mode.
+ */
+void serial_handler(void* arg) {
+	printf("serial_handler: task started\n");
+	while (1) {
+		// Poll if the handler should be working
+		while (!serial_command_handler_work) {
+//			printf("serial_handler: no work\n");
+			vTaskDelay(200/portTICK_RATE_MS);
+		}
+
+		printf("serial_handler: command %c received\n",serial_command_buffer.command);
+
+		// Check what the command is first
+		switch (serial_command_buffer.command) {
+		case 'S':
+			big_s();
+			break;
+		case 's':
+			small_s();
+			break;
+		case 'P':
+			big_p();
+			break;
+		case 'p':
+			small_p();
+			break;
+			//		case 'W':
+			//			big_w();
+			//			break;
+			//		case 'w':
+			//			small_w();
+			//			break;
+			//		case 'U':
+			//			big_u();
+			//			break;
+			//		case 'u':
+			//			small_u();
+			//			break;
+			//		case 'C':
+			//			big_c();
+			//			break;
+			//		case 'c':
+			//			small_c();
+			//			break;
+		default:
+			printf("unknown command %c\n", serial_command_buffer.command);
+			break;
+		}
+
+		// The handler has finished its job
+		printf("serial_handler: back from handler\n");
+		serial_command_handler_work = false;
+		serial_command_buffer_len = 0;
+	}
 	vTaskDelete(NULL);
 }
 
-//TODO: Rewrite as serial interrupt handler
+void serial_intr_handler(void* arg) {
+	GPIO_OUTPUT(LED_GPIO, LED_ON);
+	u8 serial_intr_len = ((READ_PERI_REG(UART_STATUS(UART0))>>UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT);
+	printf("serial_intr: called %d\n", serial_intr_len);
+	//	printf("serial_handler: intr'd len %d\n", serial_intr_len);
+	if (serial_command_buffer_len >= sizeof(serial_command_buffer)) {
+		// Prevent buffer overflow, ignore the incoming character
+		// if the command buffer is full.
+		printf("serial_handler: command too long\n");
+		// Clear FIFO. The interrupt can only be cleared by doing this.
+	} else {
+		while (serial_intr_len-->0 && !serial_command_handler_work) {
+			((char*)&serial_command_buffer)[serial_command_buffer_len++] = READ_PERI_REG(UART_FIFO(UART0));
+			// Check if the received character is newline. IF it is, tell the cmomand processing function to do its work.
+			// The command function is not directly called to minimize time spent in interrupt.
+			char last_ch = ((char*)&serial_command_buffer)[serial_command_buffer_len-1];
+			if (last_ch == '\r' || last_ch == '\n') {
+				printf("serial_handler: sending command %c arg len %d\n", serial_command_buffer.command, serial_command_buffer_len);
+				serial_command_handler_work = true;
+			}
+		}
+	}
+	serial_intr_len = ((READ_PERI_REG(UART_STATUS(UART0))>>UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT);
+	if (serial_intr_len > 0) {
+		while (serial_intr_len-->0) {
+			volatile u8 c = READ_PERI_REG(UART_FIFO(UART0));
+			WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
+		}
+	}
+	// Clear the interrupt
+	WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
+}

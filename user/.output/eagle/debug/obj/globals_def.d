@@ -1,5 +1,4 @@
 .output/eagle/debug/obj/globals_def.o .output/eagle/debug/obj/globals_def.d : globals_def.c globals.h \
- /home/m2/esp-open-sdk/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stdbool.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/esp_common.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/c_types.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stdint.h \
@@ -10,6 +9,7 @@
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/machine/ieeefp.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/sys/features.h \
  /home/m2/ESP8266_RTOS_SDK/extra_include/xtensa/config/core-isa.h \
+ /home/m2/esp-open-sdk/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stdbool.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stddef.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/esp_libc.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/esp_misc.h \

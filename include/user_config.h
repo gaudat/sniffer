@@ -25,5 +25,8 @@
 #ifndef __USER_CONFIG_H__
 #define __USER_CONFIG_H__
 
+#define UART_RXFIFO_FULL_THRHD 0x0000007F
+#define UART_RXFIFO_FULL_INT_ENA (BIT(1))
+
 #endif
 
