@@ -46,7 +46,6 @@
  /home/m2/ESP8266_RTOS_SDK/include/spiffs/spiffs_config.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/stdlib.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/machine/stdlib.h \
- /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/alloca.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/string.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/sys/cdefs.h \
  /home/m2/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/sys/string.h \
@@ -86,4 +85,4 @@
  /home/m2/ESP8266_RTOS_SDK/driver_lib/include/uart.h \
  /home/m2/ESP8266_RTOS_SDK/driver_lib/include/gpio.h \
  /home/m2/ESP8266_RTOS_SDK/include/espressif/esp8266/gpio_register.h \
- key.h globals.h sniffer_backend.h serial_handler.h
+ globals.h sniffer_backend.h serial_handler.h

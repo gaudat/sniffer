@@ -9,7 +9,6 @@
 #include "esp_common.h"
 #include "uart.h"
 #include "gpio.h"
-#include "key.h"
 #include "globals.h"
 #include "sniffer_backend.h"
 #include "serial_handler.h"
