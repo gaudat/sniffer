@@ -8,8 +8,6 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
-#include "esp_common.h"
-
 /**
  * LED is connected to GPIO2.
  */
@@ -46,5 +44,13 @@ extern bool change_channels_automatically;
 extern bool is_capturing;
 
 extern uint32_t sniff_types_mask;
+
+void led_on() {
+	digitalWrite(2, 0);
+}
+
+void led_off() {
+	digitalWrite(2, 1);
+}
 
 #endif /* GLOBALS_H_ */
