@@ -4,21 +4,21 @@ extern "C" {
 
 #include "globals.h"
 #include "serial_handler.h"
+#include "channel_hopper.h"
 #include "sniffer.h"
 #include <TaskScheduler.h>
 
-#include <SPI.h>
 #include <SD.h>
 
 Scheduler runner;
 
-const int chip_select = 15;
+
 
 void blinker() {
 	digitalWrite(2, 1);
 }
 
-Task serial_handler_task(200, TASK_FOREVER, &serial_handler);
+Task serial_handler_task(100, TASK_FOREVER, &serial_handler);
 
 void setup() {
 	// set the WiFi chip to "promiscuous" mode aka monitor mode
@@ -32,6 +32,10 @@ void setup() {
 	runner.addTask(serial_handler_task);
 	serial_handler_task.enable();
 
+	os_timer_disarm(&channel_hopper_timer);
+	os_timer_setfn(&channel_hopper_timer, channel_hopper, NULL);
+	os_timer_arm(&channel_hopper_timer, 10, true);
+
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_channel(1);
 	wifi_promiscuous_enable(0);
@@ -41,17 +45,15 @@ void setup() {
 	wifi_promiscuous_enable(1);
 	pinMode(2, OUTPUT);
 
-
-
 	Serial.print("Initializing SD card...");
 
 	// see if the card is present and can be initialized:
 	if (!SD.begin(chip_select)) {
 		Serial.println("Card failed, or not present");
 		// don't do anything more:
-		while (1);
-	}
+	} else {
 	Serial.println("card initialized.");
+	}
 }
 
 void loop() {

@@ -12,7 +12,7 @@ extern "C" {
 #include "gpio.h"
 #include "globals.h"
 #include "serial_handler.h"
-
+#include "SD.h"
 /**
  * The buffer storing command received from the serial port.
  * The command processing task is only woken up by a newline.
@@ -42,7 +42,7 @@ static bool serial_command_handler_work = false;
  * As soon as the command is received, channels are changed automatically. This function remains active until an endline is received.
  */
 void big_s() {
-	change_channels_automatically = true;
+	os_timer_arm(&channel_hopper_timer, 10, true);
 	printf("fsm: changing channels automatically\r\n");
 }
 
@@ -53,7 +53,7 @@ void big_s() {
  * the integer argument. If it is out of range tell an error.
  */
 void small_s() {
-	change_channels_automatically = false;
+	os_timer_disarm(&channel_hopper_timer);
 
 	u8 channel = 0;
 
@@ -69,46 +69,60 @@ void small_s() {
 		printf("channel: out of range (%d)\r\n",channel);
 	} else {
 		wifi_set_channel(channel);
+		// Should not need to sync on changing channels, instead use big F
+//		if (sniffer_log) {
+//			printf("channel: channel changed, syncing sniffer_log\r\n");
+//			sniffer_log.close();
+//			sniffer_log = SD.open("sniffer.log",FILE_WRITE);
+//		}
 	}
 	printf("channel: %d\r\n", wifi_get_channel());
 }
 
 void big_p() {
-	int channel = 0;
+	int num = 0;
 
 	// Length of args is total length minus 2, 1 for command 1 for endline
 	for (size_t i = 0; i < serial_command_buffer_len - 2; i++) {
-		channel *= 10;
-		channel += serial_command_buffer.command_arg[i] - '0';
-		printf("channel %d i %zu %c\r\n", channel, i, serial_command_buffer.command_arg[i]);
+		num *= 10;
+		num += serial_command_buffer.command_arg[i] - '0';
+		printf("num %d i %zu %c\r\n", num, i, serial_command_buffer.command_arg[i]);
 	}
 
-	if (channel < 0 || channel > 31) {
-		printf("type: out of range (%d)\r\n", channel);
+	if (num < 0 || num > 64) {
+		printf("type: out of range (%d)\r\n", num);
 		return;
 	}
 
-	sniff_types_mask |= 1 << channel;
-	printf("type: current mask: 31:0 %08x\r\n", sniff_types_mask);
+	if (num >= 32) {
+		sniff_types_mask_32 |= 1 << (num - 32);
+	} else {
+		sniff_types_mask_10 |= 1 << num;
+	}
+	printf("type: current mask: 64:0 %08x%08x\r\n", sniff_types_mask_32,sniff_types_mask_10);
 }
 
 void small_p() {
-	int channel = 0;
+	int num = 0;
 
 	// Length of args is total length minus 2, 1 for command 1 for endline
 	for (size_t i = 0; i < serial_command_buffer_len - 2; i++) {
-		channel *= 10;
-		channel += serial_command_buffer.command_arg[i] - '0';
-		printf("channel %d i %zu %c\r\n", channel, i, serial_command_buffer.command_arg[i]);
+		num *= 10;
+		num += serial_command_buffer.command_arg[i] - '0';
+		printf("num %d i %zu %c\r\n", num, i, serial_command_buffer.command_arg[i]);
 	}
 
-	if (channel < 0 || channel > 31) {
-		printf("type: out of range (%d)\r\n", channel);
+	if (num < 0 || num > 64) {
+		printf("type: out of range (%d)\r\n", num);
 		return;
 	}
 
-	sniff_types_mask &= ~( 1 << channel);
-	printf("type: current mask: 31:0 %08x\r\n", sniff_types_mask);
+	if (num >= 32) {
+		sniff_types_mask_32 &= ~( 1 << (num - 32));
+	} else {
+		sniff_types_mask_10 &= ~( 1 << num);
+	}
+	printf("type: current mask: 64:0 %08x%08x\r\n", sniff_types_mask_32,sniff_types_mask_10);
 }
 
 void big_w() {
@@ -121,6 +135,51 @@ void small_w() {
 	printf("sd: not writing to sd now\r\n");
 }
 
+void big_t() {
+	sniffer_drop_more = true;
+	printf("sniffer: dropping some frames\r\n");
+}
+
+void small_t() {
+	sniffer_drop_more = false;
+	printf("sniffer: showing all frames\r\n");
+}
+
+void big_f() {
+	if (sniffer_log) {
+		sniffer_log.close();
+	}
+	Serial.print("Initializing SD card...");
+
+	// see if the card is present and can be initialized:
+	if (!SD.begin(chip_select)) {
+		Serial.println("Card failed, or not present");
+		// don't do anything more:
+	} else {
+	Serial.println("card initialized.");
+	}
+	if (!sniffer_log) {
+		sniffer_log = SD.open("sniffer.log",FILE_WRITE);
+	}
+}
+
+void small_f() {
+	int num = 0;
+
+	// Length of args is total length minus 2, 1 for command 1 for endline
+	for (size_t i = 0; i < serial_command_buffer_len - 2; i++) {
+		num *= 10;
+		num += serial_command_buffer.command_arg[i] - '0';
+		printf("num %d i %zu %c\r\n", num, i, serial_command_buffer.command_arg[i]);
+	}
+
+	if (num < 1) {
+		printf("flush: out of range (%d)\r\n", num);
+	} else {
+		sniffer_flush_interval = num;
+	}
+	printf("flush: current flush interval %d\r\n", sniffer_flush_interval);
+}
 /**
  * This task implements a finite-state machine for parsing command line control inputs.
  *
@@ -141,7 +200,11 @@ void small_w() {
  * Big W - Starts recording all collected MAC frame headers to the MicroSD card from now on.
  * small w - Stops recording MAC frame headers to MicroSD card.
  * Big C - Starts sniffing by putting the chip into promiscuous mode.
- * Small c - Stops sniffing by putting the chip into AP mode.
+ * small c - Stops sniffing by putting the chip into AP mode.
+ * Big F - (Re-)initializes the SD card.
+ * small f - Sets flush interval of the SD card.
+ * Big T - Start dropping frames based on predefined filters in sniffer_backend.
+ * small t - Stop dropping frames. Print or save everything even though it makes the system lag.
  */
 void serial_handler() {
 //	printf("serial_handler: task started\r\n");
@@ -173,12 +236,18 @@ void serial_handler() {
 	case 'w':
 		small_w();
 		break;
-		//		case 'U':
-		//			big_u();
-		//			break;
-		//		case 'u':
-		//			small_u();
-		//			break;
+	case 'F':
+		big_f();
+		break;
+	case 'f':
+		small_f();
+		break;
+	case 'T':
+		big_t();
+		break;
+	case 't':
+		small_t();
+		break;
 		//		case 'C':
 		//			big_c();
 		//			break;
@@ -196,8 +265,6 @@ void serial_handler() {
 	serial_command_buffer_len = 0;
 
 }
-
-struct serial_intr_handler_state serial_intr_handler_global_state;
 
 void serial_intr_handler(void* arg) {
 	u8 serial_intr_len = Serial.available();
@@ -219,7 +286,7 @@ void serial_intr_handler(void* arg) {
 				serial_command_handler_work = true;
 			}
 		}
-		if (serial_command_handler_work) {
+		if (serial_command_handler_work && serial_intr_len > 0) {
 			printf("serial_handler: still working on previous command\r\n");
 			while (serial_intr_len-->0) {
 				// Flush rx buffer

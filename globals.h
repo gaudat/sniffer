@@ -9,13 +9,18 @@
 #define GLOBALS_H_
 
 #include <Arduino.h>
-
+#include "SD.h"
+extern "C" {
+#include <user_interface.h>
+}
 /**
  * LED is connected to GPIO2.
  */
 #define LED_GPIO GPIO_Pin_2
 #define LED_OFF 1
 #define LED_ON 0
+
+#define chip_select 15
 
 /**
  * Call this function in user_init to set all globals to a defined initial value.
@@ -30,10 +35,6 @@ extern void initialize_globals();
  */
 extern bool is_autonomous;
 
-/**
- * Set to true if the Wi-Fi channel listening to is changed automatically.
- */
-extern bool change_channels_automatically;
 
 /**
  * Sniffer control variables.
@@ -45,8 +46,21 @@ extern bool change_channels_automatically;
  */
 extern bool is_capturing;
 
-extern uint32_t sniff_types_mask;
+extern uint32_t sniff_types_mask_32;
+extern uint32_t sniff_types_mask_10;
 
 extern bool sniffer_write_to_sd;
+
+extern File sniffer_log;
+
+extern unsigned int sniffer_flush_interval;
+
+extern bool sniffer_drop_more;
+
+extern int channel_counted_frames;
+
+extern int channel_hop_delay[14];
+
+extern os_timer_t channel_hopper_timer;
 
 #endif /* GLOBALS_H_ */
