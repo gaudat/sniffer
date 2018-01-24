@@ -47,4 +47,6 @@ extern bool is_capturing;
 
 extern uint32_t sniff_types_mask;
 
+extern bool sniffer_write_to_sd;
+
 #endif /* GLOBALS_H_ */

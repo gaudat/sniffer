@@ -25,6 +25,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/ESP8266WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SPI}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.546434903" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -36,6 +39,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/ESP8266WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SPI}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.1320277095" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -47,6 +53,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/ESP8266WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/TaskScheduler/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SD/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sniffer/libraries/SPI}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.870926392" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>

@@ -111,6 +111,16 @@ void small_p() {
 	printf("type: current mask: 31:0 %08x\r\n", sniff_types_mask);
 }
 
+void big_w() {
+	sniffer_write_to_sd = true;
+	printf("sd: writing to sd now\r\n");
+}
+
+void small_w() {
+	sniffer_write_to_sd = false;
+	printf("sd: not writing to sd now\r\n");
+}
+
 /**
  * This task implements a finite-state machine for parsing command line control inputs.
  *
@@ -157,12 +167,12 @@ void serial_handler() {
 	case 'p':
 		small_p();
 		break;
-		//		case 'W':
-		//			big_w();
-		//			break;
-		//		case 'w':
-		//			small_w();
-		//			break;
+	case 'W':
+		big_w();
+		break;
+	case 'w':
+		small_w();
+		break;
 		//		case 'U':
 		//			big_u();
 		//			break;
@@ -207,6 +217,13 @@ void serial_intr_handler(void* arg) {
 			if (last_ch == '\r' || last_ch == '\n') {
 				printf("serial_handler: sending command %c arg len %d\r\n", serial_command_buffer.command, serial_command_buffer_len);
 				serial_command_handler_work = true;
+			}
+		}
+		if (serial_command_handler_work) {
+			printf("serial_handler: still working on previous command\r\n");
+			while (serial_intr_len-->0) {
+				// Flush rx buffer
+				volatile char ch = Serial.read();
 			}
 		}
 	}

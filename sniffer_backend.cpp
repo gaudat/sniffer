@@ -7,6 +7,7 @@
 
 #include "globals.h"
 #include "sniffer.h"
+#include "SD.h"
 
 /**
  * Wi-Fi sniffer backend task function.
@@ -14,6 +15,10 @@
  * @param arg Struct for communicating between other tasks and this one
  */
 
+
+static const int line_buffer_size = 128;
+static int line_buffer_pos = 0;
+static char line_buffer[line_buffer_size];
 
 void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	// len is at most 128, any packet longer than that gets truncated
@@ -26,21 +31,48 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	// filter packet types
 	if (!(sniff_types_mask >> (hdr->frame_control.type*16+hdr->frame_control.subtype)&0x01)) return;
 
-	// Dump to serial port
-	printf("%010u ", micros());
-	printf("CH%02d RI%02d ", rx_ctrl->channel, rx_ctrl->rssi);
+	line_buffer_pos = 0;
 
-	printf("%x%x ", hdr->frame_control.type, hdr->frame_control.subtype);
-	printf("%x%x ", hdr->frame_control.to_ds, hdr->frame_control.from_ds);
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%010u ", micros());
 
-	printf("%02x%02x%02x%02x%02x%02x<", hdr->addr1[0], hdr->addr1[1], hdr->addr1[2],
-							hdr->addr1[3], hdr->addr1[4], hdr->addr1[5]);
-	printf("%02x%02x%02x%02x%02x%02x:", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2],
-								hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
-	printf("%02x%02x%02x%02x%02x%02x-", hdr->addr3[0], hdr->addr3[1], hdr->addr3[2],
-								hdr->addr3[3], hdr->addr3[4], hdr->addr3[5]);
-	printf("%02x%02x%02x%02x%02x%02x\r\n", hdr->addr4[0], hdr->addr4[1], hdr->addr4[2],
-								hdr->addr4[3], hdr->addr4[4], hdr->addr4[5]);
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"CH%02d RI%02d ", rx_ctrl->channel, rx_ctrl->rssi);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%x%x ", hdr->frame_control.type, hdr->frame_control.subtype);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%x%x ", hdr->frame_control.to_ds, hdr->frame_control.from_ds);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%02x%02x%02x%02x%02x%02x<", hdr->addr1[0], hdr->addr1[1], hdr->addr1[2],
+			hdr->addr1[3], hdr->addr1[4], hdr->addr1[5]);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%02x%02x%02x%02x%02x%02x:", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2],
+			hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%02x%02x%02x%02x%02x%02x-", hdr->addr3[0], hdr->addr3[1], hdr->addr3[2],
+			hdr->addr3[3], hdr->addr3[4], hdr->addr3[5]);
+
+	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
+			"%02x%02x%02x%02x%02x%02x\r\n", hdr->addr4[0], hdr->addr4[1], hdr->addr4[2],
+			hdr->addr4[3], hdr->addr4[4], hdr->addr4[5]);
+
+	printf("%s", line_buffer);
+
+	if (sniffer_write_to_sd) {
+		File log = SD.open("sniffer.log", FILE_WRITE);
+		if (log) {
+		log.print(line_buffer);
+		log.close();
+		} else {
+			Serial.println("sniffer: error opening sniffer.log");
+		}
+	}
+
 	digitalWrite(2, !digitalRead(2));
 }
 
