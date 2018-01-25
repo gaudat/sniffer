@@ -13,6 +13,7 @@ extern "C" {
 #include "globals.h"
 #include "serial_handler.h"
 #include "SD.h"
+#include "channel_hopper.h"
 /**
  * The buffer storing command received from the serial port.
  * The command processing task is only woken up by a newline.
@@ -180,6 +181,27 @@ void small_f() {
 	}
 	printf("flush: current flush interval %d\r\n", sniffer_flush_interval);
 }
+
+void big_b() {
+	int num = 0;
+
+	// Length of args is total length minus 2, 1 for command 1 for endline
+	for (size_t i = 0; i < serial_command_buffer_len - 2; i++) {
+		num *= 10;
+		num += serial_command_buffer.command_arg[i] - '0';
+		printf("num %d i %zu %c\r\n", num, i, serial_command_buffer.command_arg[i]);
+	}
+	if (serial_command_buffer_len == 2) {
+		// No command is specified. Do the beacon scanning process at once.
+		beacon_scanner(nullptr);
+		skip_quiet_channels = true;
+	}
+}
+
+void small_b() {
+	skip_quiet_channels = false;
+	printf("beacon: not skipping quiet channels\r\n");
+}
 /**
  * This task implements a finite-state machine for parsing command line control inputs.
  *
@@ -205,6 +227,9 @@ void small_f() {
  * small f - Sets flush interval of the SD card.
  * Big T - Start dropping frames based on predefined filters in sniffer_backend.
  * small t - Stop dropping frames. Print or save everything even though it makes the system lag.
+ * Big B - Start scanning for beacons on all channels now, with the specified delay. If no delay is specified only do this once.
+ * After scanning for beacons ignore the channels that are quiet.
+ * small b - Stop scanning for beacons and scan through all channels.
  */
 void serial_handler() {
 //	printf("serial_handler: task started\r\n");
@@ -248,6 +273,12 @@ void serial_handler() {
 	case 't':
 		small_t();
 		break;
+	case 'B':
+		big_b();
+		break;
+	case 'b':
+		small_b();
+		break;
 		//		case 'C':
 		//			big_c();
 		//			break;
@@ -267,6 +298,7 @@ void serial_handler() {
 }
 
 void serial_intr_handler(void* arg) {
+	(void)arg;
 	u8 serial_intr_len = Serial.available();
 	printf("serial_intr: called %d\r\n", serial_intr_len);
 	//	printf("serial_handler: intr'd len %d\n", serial_intr_len);
@@ -291,6 +323,7 @@ void serial_intr_handler(void* arg) {
 			while (serial_intr_len-->0) {
 				// Flush rx buffer
 				volatile char ch = Serial.read();
+				(void)ch;
 			}
 		}
 	}

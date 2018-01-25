@@ -36,6 +36,7 @@ void setup() {
 	os_timer_setfn(&channel_hopper_timer, channel_hopper, NULL);
 	os_timer_arm(&channel_hopper_timer, 10, true);
 
+
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_channel(1);
 	wifi_promiscuous_enable(0);
@@ -43,7 +44,7 @@ void setup() {
 	wifi_set_promiscuous_rx_cb(promiscuous_rx_cb);
 	delay(10);
 	wifi_promiscuous_enable(1);
-	pinMode(2, OUTPUT);
+	pinMode(2, INPUT); // Change this to turn off led
 
 	Serial.print("Initializing SD card...");
 

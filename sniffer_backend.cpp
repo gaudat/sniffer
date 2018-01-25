@@ -28,6 +28,7 @@ typedef struct mac_address {
 static mac_address* aps = NULL;
 
 void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
+	(void)len;
 	if (!digitalRead(0)) {
 		/**
 		 * If too many packets appear at once, writing to SD card will take so much time
@@ -48,7 +49,7 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	line_buffer_pos = 0;
 
 	// Count the number of frames detected to determing if the channel is busy
-		channel_counted_frames++; // not actually beacon
+	channel_counted_frames++; // not actually beacon
 
 	// Preliminary frame filters incoming
 	// If the frame originates from the AP ignore it, as the RSSI is not useful to tracking user devices.

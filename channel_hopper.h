@@ -10,6 +10,7 @@
 
 
 void channel_hopper(void* arg);
+void beacon_scanner(void* arg);
 
 
 #endif /* CHANNEL_HOPPER_H_ */

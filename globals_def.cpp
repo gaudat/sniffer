@@ -21,17 +21,21 @@ bool sniffer_drop_more;
 int channel_counted_frames;
 int channel_hop_delay[14];
 os_timer_t channel_hopper_timer;
+bool skip_quiet_channels;
+int beacon_scan_interval;
 
 void initialize_globals() {
 	is_autonomous = false;
 	is_capturing = true;
 	sniff_types_mask_32 = ~0;
 	sniff_types_mask_10 = ~0;
-	sniffer_write_to_sd = false;
+	sniffer_write_to_sd = true;
 	sniffer_flush_interval = 16;
-	sniffer_drop_more = false;
+	sniffer_drop_more = true;
 	channel_counted_frames = 0;
+	skip_quiet_channels = false;
 	for (int i=0; i<14; i++) {
 		channel_hop_delay[i] = 200;
 	}
+	beacon_scan_interval = 300000; // 5 minutes
 }

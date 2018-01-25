@@ -58,9 +58,12 @@ extern unsigned int sniffer_flush_interval;
 extern bool sniffer_drop_more;
 
 extern int channel_counted_frames;
-
 extern int channel_hop_delay[14];
 
 extern os_timer_t channel_hopper_timer;
+
+extern bool skip_quiet_channels;
+
+extern int beacon_scan_interval;
 
 #endif /* GLOBALS_H_ */
