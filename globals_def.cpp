@@ -25,7 +25,7 @@ bool skip_quiet_channels;
 int beacon_scan_interval;
 
 void initialize_globals() {
-	is_autonomous = false;
+	is_autonomous = true;
 	is_capturing = true;
 	sniff_types_mask_32 = ~0;
 	sniff_types_mask_10 = ~0;

@@ -29,15 +29,7 @@ static mac_address* aps = NULL;
 
 void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	(void)len;
-	if (!digitalRead(0)) {
-		/**
-		 * If too many packets appear at once, writing to SD card will take so much time
-		 * that commands from the serial port do not get to be processed.
-		 */
-		printf("sniffer: bypassed as flash btn is pressed\r\n");
-		digitalWrite(2, HIGH);
-		return;
-	}
+
 	static unsigned int i = 0;
 	// len is at most 128, any packet longer than that gets truncated
 
@@ -50,6 +42,16 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 
 	// Count the number of frames detected to determing if the channel is busy
 	channel_counted_frames++; // not actually beacon
+
+	if (!digitalRead(0)) {
+		/**
+		 * If too many packets appear at once, writing to SD card will take so much time
+		 * that commands from the serial port do not get to be processed.
+		 */
+		digitalWrite(2, channel_counted_frames%2); // Blink on each alternating frame
+		printf("sniffer: bypassed as flash btn is pressed\r\n");
+		return;
+	}
 
 	// Preliminary frame filters incoming
 	// If the frame originates from the AP ignore it, as the RSSI is not useful to tracking user devices.
@@ -77,6 +79,9 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 		} else {
 			aps = li_new;
 		}
+		printf("%010lu AP%02x%02x%02x%02x%02x%02x\r\n", micros(),
+				li_new->addr[0], li_new->addr[1], li_new->addr[2],
+				li_new->addr[3], li_new->addr[4], li_new->addr[5]);
 		// Still drop the beacon frame
 		if (sniffer_drop_more) return;
 	}
@@ -154,7 +159,8 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 		}
 	}
 
-	digitalWrite(2, !digitalRead(2));
+	// Turn off LED
+	digitalWrite(2, 1);
 }
 
 /*

@@ -44,7 +44,7 @@ void setup() {
 	wifi_set_promiscuous_rx_cb(promiscuous_rx_cb);
 	delay(10);
 	wifi_promiscuous_enable(1);
-	pinMode(2, INPUT); // Change this to turn off led
+	pinMode(2, OUTPUT);
 
 	Serial.print("Initializing SD card...");
 
