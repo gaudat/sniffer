@@ -20,12 +20,8 @@ static const int line_buffer_size = 128;
 static int line_buffer_pos = 0;
 static char line_buffer[line_buffer_size];
 
-typedef struct mac_address {
-	u8 addr[6];
-	mac_address* next;
-} mac_address;
-
-static mac_address* aps = NULL;
+static mac_address* ap_list = NULL;
+static const int ap_list_max_size = 32; // How many aps' mac addresses to save
 
 void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	(void)len;
@@ -48,7 +44,7 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 		 * If too many packets appear at once, writing to SD card will take so much time
 		 * that commands from the serial port do not get to be processed.
 		 */
-		digitalWrite(2, channel_counted_frames%2); // Blink on each alternating frame
+//		digitalWrite(2, channel_counted_frames%2); // Blink on each alternating frame
 		printf("sniffer: bypassed as flash btn is pressed\r\n");
 		return;
 	}
@@ -56,16 +52,31 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	// Preliminary frame filters incoming
 	// If the frame originates from the AP ignore it, as the RSSI is not useful to tracking user devices.
 	bool frame_filtered = false; // Should this frame be filtered?
-	mac_address* li = aps;
+	mac_address* li = ap_list;
+	static int ap_list_size = 0;
 	while (li != NULL) {
 		if (memcmp(li->addr, hdr->addr2, 6*sizeof(u8)) == 0) {
 			// The source address matches one of the APs
 			frame_filtered = true;
 			if (sniffer_drop_more) return;
 		}
+		ap_list_size++;
 		if (li->next == NULL) break;
 		li = li->next;
 	}
+	/*// CODE DOESNT WORK
+	// ap_list_size is length of the linked list now
+	ap_list_size -= ap_list_max_size;
+	// Prune oldest ap items
+	mac_address* new_head = ap_list;
+	while (ap_list_size --> 0) {
+		mac_address* ap_removed = new_head;
+		new_head = new_head->next;
+		delete ap_removed;
+	}
+	ap_list = new_head;
+	// ap_list should be equal ap_list_max_size now
+*/
 	// li should be null now
 	// If it is a beacon packet, add the originating MAC address to the filter list
 	if (hdr->frame_control.type == 0 && hdr->frame_control.subtype == 8 && !frame_filtered) {
@@ -74,10 +85,10 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 		mac_address* li_new = new mac_address;
 		memcpy(li_new->addr, hdr->addr2, 6*sizeof(u8));
 		li_new->next = NULL;
-		if (aps != NULL) {
+		if (ap_list != NULL) {
 			li->next = li_new;
 		} else {
-			aps = li_new;
+			ap_list = li_new;
 		}
 		printf("%010lu AP%02x%02x%02x%02x%02x%02x\r\n", micros(),
 				li_new->addr[0], li_new->addr[1], li_new->addr[2],
@@ -95,6 +106,25 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	} else {
 		// It is either 1 or 0
 		if (!(sniff_types_mask_10 >> ((hdr->frame_control.type)*16+hdr->frame_control.subtype) & 0x1)) return;
+	}
+
+	// Print source mac address out
+
+	// See if mac address is in most common list, if yes skip it, if no add it in
+	bool common_found = false;
+	for (int i=0; i<SW_BUFFER_SIZE; i++) {
+		if (memcmp(hdr->addr2,&(sw_buffer[i]),6*sizeof(u8)) == 0) {
+			common_found = true;
+			sw_lastseen[i] = micros();
+			break;
+		}
+	}
+	if (!common_found) {
+		// Add into common list, replacing the least recently seen one
+		sw_lastseen[sw_write_loc] = micros();
+		memcpy(&(sw_buffer[sw_write_loc++]),hdr->addr2,6*sizeof(u8));
+		if (sw_write_loc >= SW_BUFFER_SIZE) sw_write_loc = 0;
+		sw_updated = true;
 	}
 
 	line_buffer_pos += snprintf(line_buffer+line_buffer_pos, line_buffer_size-line_buffer_pos,
@@ -126,7 +156,7 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 			hdr->addr4[3], hdr->addr4[4], hdr->addr4[5]);
 
 	int li_len = 0;
-	li = aps;
+	li = ap_list;
 	while (li != NULL) {
 		li = li->next;
 		li_len++;
@@ -160,7 +190,11 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 	}
 
 	// Turn off LED
-	digitalWrite(2, 1);
+	if (is_autonomous) {
+//		digitalWrite(2, 1);
+	} else {
+//		digitalWrite(2, channel_counted_frames%2);
+	}
 }
 
 /*

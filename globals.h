@@ -13,14 +13,21 @@
 extern "C" {
 #include <user_interface.h>
 }
-/**
+
+/*
  * LED is connected to GPIO2.
  */
-#define LED_GPIO GPIO_Pin_2
+#define LED_GPIO 2
 #define LED_OFF 1
 #define LED_ON 0
 
 #define chip_select 15
+
+typedef struct mac_address {
+	u8 addr[6];
+	mac_address* next;
+} mac_address;
+
 
 /**
  * Call this function in user_init to set all globals to a defined initial value.
@@ -65,5 +72,12 @@ extern os_timer_t channel_hopper_timer;
 extern bool skip_quiet_channels;
 
 extern int beacon_scan_interval;
+
+#define SW_BUFFER_SIZE 32
+extern mac_address sw_buffer[SW_BUFFER_SIZE];
+extern u32 sw_lastseen[SW_BUFFER_SIZE];
+extern unsigned int sw_write_loc;
+extern unsigned int sw_read_loc;
+extern bool sw_updated;
 
 #endif /* GLOBALS_H_ */

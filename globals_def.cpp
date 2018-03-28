@@ -23,6 +23,9 @@ int channel_hop_delay[14];
 os_timer_t channel_hopper_timer;
 bool skip_quiet_channels;
 int beacon_scan_interval;
+unsigned int sw_read_loc;
+unsigned int sw_write_loc;
+bool sw_updated;
 
 void initialize_globals() {
 	is_autonomous = true;
@@ -38,4 +41,7 @@ void initialize_globals() {
 		channel_hop_delay[i] = 200;
 	}
 	beacon_scan_interval = 300000; // 5 minutes
+	sw_read_loc = 0;
+	sw_write_loc = 0;
+	sw_updated = false;
 }
