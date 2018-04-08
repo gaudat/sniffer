@@ -191,9 +191,9 @@ void promiscuous_rx_cb(uint8_t* buf, uint16_t len) {
 
 	// Turn off LED
 	if (is_autonomous) {
-//		digitalWrite(2, 1);
+		digitalWrite(2, 1);
 	} else {
-//		digitalWrite(2, channel_counted_frames%2);
+		digitalWrite(2, channel_counted_frames%2);
 	}
 }
 

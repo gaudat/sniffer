@@ -73,7 +73,7 @@ extern bool skip_quiet_channels;
 
 extern int beacon_scan_interval;
 
-#define SW_BUFFER_SIZE 32
+#define SW_BUFFER_SIZE 8
 extern mac_address sw_buffer[SW_BUFFER_SIZE];
 extern u32 sw_lastseen[SW_BUFFER_SIZE];
 extern unsigned int sw_write_loc;
